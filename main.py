@@ -23,32 +23,27 @@ Ht = [[1, 1, 0, 0, 0, 0, 0, 0, 1],
 dane = []
 
 
-def loadDataTxt():
+def loadDataTxt(path):
     words_list = []
-    dane_txt = open("dane.txt", mode="r+")
-    for word in dane_txt:
-        if 1:
-            word_list = []
-            for i in range(16):
-                word_list.append(int(word[i]))
-            word_list.reverse()
-            words_list.append(word_list)
-        else:
-            print("Blad danych")
-            print("Niepoprawnie zapisany wiersz numer {}".format(len(dane)))
-
+    dane_txt = open(path, mode="r+")
+    for line in dane_txt:
+        word_list = list(line)
+        word_list.pop()
+        for i in range(len(word_list)):
+            word_list[i] = int(word_list[i])
+        word_list.reverse()
+        words_list.append(word_list)
     return words_list
 
 
 # pamiętaj o dobrym pobieraniu potegi kolejnosc potęg
 
-def enterA():
-    word = input("Proszę wpisać wyraz zaczynająć od najwyższej potęgi x^7 i oddzielajac spacja np.1 1 0 1 0 1 1")
+def enter_word(word):
     word_list = []
-    for i in range(len(word)):
-        word_list.append(int(word[i]))
+    word_list = list(word)
+    for i in range(len(word_list)):
+        word_list[i] = int(word_list[i])
     word_list.reverse()
-
     return word_list
 
 
@@ -71,7 +66,7 @@ def displayPolynomial(p):
         if p[i] != 0:
             if needPlus == True:
                 print(" + ", end='')
-            print("[" + str(p[i]) + "]x^" + str(i), end='', )
+            print("x^" + str(i), end='', )
             needPlus = True
     print()
 
@@ -156,41 +151,95 @@ def haming_distance(s):
 def decode(cx):
     h = []
     if haming_distance(calculateSyndrom(cx)) == 0:
+        print("Poprawnie odebrany sygnał")
+        for i in range(9, 16):
+            h.append(cx[i])
+    if haming_distance(calculateSyndrom(cx)) > 1:
+        print("Błąd przekraczający zdolność korekcyjną")
+    if haming_distance(calculateSyndrom(cx)) == 1:
+        cx = recode(cx)
         for i in range(len(cx) - len(polynomialG) + 1):
             h.append(cx[i + len(polynomialG) - 1])
-    if haming_distance(calculateSyndrom(cx)) > 1:
-        "Błąd przekraczający zdolność korekcyjną"
-    if haming_distance(calculateSyndrom(cx)) == 1:
-        print("polujmy na błedy")
+        print("Blad informacji naprawiony metoda polowania na bledy")
     return h
 
+
 def decode_list():
-    for word_list in loadDataTxt():
-        print(decode(word_list))
+    try:
+        for word_list in loadDataTxt("c(x).txt"):
+            print("c(x)=", end='')
+            displayPolynomial(word_list)
+            h = decode(word_list)
+            print("h(x)=", end='')
+            displayPolynomial(h)
+            print("")
+    except IndexError:
+        print("Błąd pobrania wyrazu!!!!")
+        print("Na końcu KARZDEGO wyrazu w pliku tekstowym należy umieścić enter (również przy ostatnim)")
     return
 
 
+def encode_list():
+    try:
+        for word_list in loadDataTxt("h(x).txt"):
+            print("h(x)=", end='')
+            displayPolynomial(word_list)
+            c = encode(word_list)
+            print("c(x)=", end='')
+            displayPolynomial(c)
+            print()
+    except IndexError:
+        print("BłĄD POBRANIA WYRAZU!!!!")
+        print("Na końcu KARZDEGO wyrazu w pliku tekstowym należy umieścić enter (również przy ostatnim)")
 
-# był problem z liczeniem reszty z dzielenia, bo zajmwoała 10 miejsc a powinna 9
+def recode(cx):
+    for i in range(len(cx)):
+        cx.append(cx[0])
+        cx.pop(0)
+        if remainder_by_G(cx) == 1:
+            cx = remainder_by_G(cx) + cx
+    return cx
 
 
-# b = [1,0,1,0,1,0,1]
-# c = [1,1,0,0,1,0,1]
-# d = [1,0,1,1,0,0,0]
-# e = [1,0,0,0,1,0,1]
-# kartka = [1,0,0,0,1,0,0]
-#
-# print(encode(b))
-# print(encode(c))
-# print(encode(d))
-# print(encode(e))
-# print(encode(kartka))
+print("Jaka operacje wykonac? (podaj numet i zatwierdź enterem)")
+print("1. Koduj jeden wyraz wpisując go w wiersz polecen")
+print("2. Dekoduj jeden wyraz wpisując go w wiersz polecen")
+print("3. Koduj wyrazy z pliku h(x).txt")
+print("4. Dekoduj wyrazy z pliku c(x).txt")
 
+switch = input()
 
-decode_list()
-# nawet dziła tylko mało intuicyjnie dla mnie ale tam ma być
-#dodajesz wartości błedne na dekoder i on robi tylko spacje
+if switch == "1":
+    word = input("Podaj 7 liczb wyrazu zaczynajac od najwyższej potęgi x^6 i naciśnij enter.")
+    print("h(x)=", end='')
+    displayPolynomial(enter_word(word))
+    cx = encode(enter_word(word))
+    if cx != "":
+        print("c(x)=", end='')
+    displayPolynomial(cx)
+    input("")
 
+if switch == "2":
+    word = input("Podaj 16 liczb wyrazu zaczynajac od najwyższej potęgi x^15 i naciśnij enter.")
+    print("c(x)=", end='')
+    displayPolynomial(enter_word(word))
+    hx = decode(enter_word(word))
+    if hx != "":
+        print("h(x)=", end='')
+    displayPolynomial(hx)
+    input("")
 
+if switch == "3":
+    try:
+        encode_list()
+        input("")
+    except FileNotFoundError:
+        input("Brak pliku h(x).txt")
+if switch == "4":
+    try:
+        decode_list()
+        input("")
+    except FileNotFoundError:
+        input("Brak pliku c(x).txt")
 
 
